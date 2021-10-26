@@ -1,0 +1,21 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "environment": {
+            "value": "dev"
+        },
+        "ApplicationName": {
+            "value": "M04Lesson2"
+        },
+        "vNetAddressRange": {
+            "value": "10.0.0.0/16"
+        },
+        "subnet1AddressRange": {
+            "value": "10.0.0.0/24"
+        },
+        "subnet2AddressRange": {
+            "value": "10.0.1.0/24"
+        }      
+    }
+}

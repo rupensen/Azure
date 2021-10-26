@@ -1,0 +1,74 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "ApplicationName": {
+            "type": "string",
+            "metadata": {
+                "description": "Provide App Name"
+            }
+        },
+        "Environment": {
+            "type": "string",
+            "metadata": {
+                "description": "Env"
+            }
+        },
+        "vNetAddressRange": {
+            "type": "string",
+            "metadata": {
+                "description": "description"
+            }
+        },
+        "subnet1AddressRange": {
+            "type": "string",
+            "metadata": {
+                "description": "description"
+            }
+        },
+        "subnet2AddressRange": {
+            "type": "string",
+            "metadata": {
+                "description": "description"
+            }
+        }
+    },
+    "functions": [],
+    "variables": {
+        "vNetName": "[concat(parameters('ApplicationName'), '-', parameters('Environment'), '-VNet')]",
+        "Subnet1Name": "[concat(parameters('Environment'), '-', parameters('ApplicationName'), '-Subnet-')]"
+    },
+    "resources": [
+        {
+            "name": "[variables('vNetName')]",
+            "type": "Microsoft.Network/virtualNetworks",
+            "apiVersion": "2020-11-01",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "displayName": "virtualNetwork1"
+            },
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "10.0.0.0/16"
+                    ]
+                },
+                "subnets": [
+                    {
+                        "name": "[concat(variables('Subnet1Name'), '1')]",
+                        "properties": {
+                            "addressPrefix": "10.0.0.0/24"
+                        }
+                    },
+                    {
+                        "name": "[concat(variables('Subnet1Name') , '2')]",
+                        "properties": {
+                            "addressPrefix": "10.0.1.0/24"
+                        }
+                    }
+                ]
+            }
+        }
+    ],
+    "outputs": {}
+}

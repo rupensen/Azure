@@ -1,0 +1,82 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "environment": {
+        "type": "string",
+        "metadata": {
+            "description": "Environment (Dev/QA/Prod)"
+        }
+    },
+        "projectName": {
+        "type": "string",
+        "metadata": {
+            "description": "Project Name"
+        }
+    }
+    },
+    "functions": [],
+    "variables": {
+        "storageName": "[uniqueString(resourceGroup().id)]",
+        "vnetName": "[concat('VNet-', parameters('projectName'), '-', parameters('environment'))]"
+    },
+    "resources": [
+       {
+        "type": "Microsoft.Storage/storageAccounts",
+        "apiVersion": "2018-07-01",
+        "name": "[variables('storageName')]",
+        "location": "[resourceGroup().location]",
+        "tags": {
+            "displayName": "[variables('storageName')]"
+        },
+        "sku": {
+            "name": "Standard_LRS"
+        },
+        "kind": "StorageV2",
+        "resources": [
+            {
+                "name": "default/templates",
+                "type": "blobServices/containers",
+                "apiVersion": "2018-07-01",
+                "dependsOn": [
+                    "[variables('storageName')]"
+                ],
+                "properties": {
+                    "publicAccess": "Blob"
+                }
+            }
+        ]
+    },
+    {
+      "type": "Microsoft.Network/virtualNetworks",
+      "apiVersion": "2018-08-01",
+      "name": "[variables('vnetName')]",
+      "location": "[resourceGroup().location]",
+      "tags": {
+          "displayName": "[variables('vnetName')]"
+      },
+      "properties": {
+          "addressSpace": {
+              "addressPrefixes": [
+                  "10.0.0.0/16"
+              ]
+          },
+          "subnets": [
+              {
+                  "name": "Subnet-1",
+                  "properties": {
+                      "addressPrefix": "10.0.0.0/24"
+                  }
+              },
+              {
+                  "name": "Subnet-2",
+                  "properties": {
+                      "addressPrefix": "10.0.1.0/24"
+                  }
+              }
+          ]
+      }
+   }   
+   ],
+    "outputs": {}
+}

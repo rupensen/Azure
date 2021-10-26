@@ -1,0 +1,228 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "VMPrefix": {
+            "type": "string",
+            "maxLength": 4,
+            "minLength": 3,
+            "metadata": {
+                "description": "description"
+            }    
+        },
+        "ApplicationName": {
+            "type": "string",
+            "maxLength": 6,
+            "minLength": 3,
+            "metadata": {
+                "description": "description"
+            }
+        },
+        "Environment": {
+            "type": "string",
+            "allowedValues": ["DEV", "STAGE", "PRD"],
+            "metadata": {
+                "description": "description"
+            }
+        },
+        "Size": {
+            "type": "string",
+            "allowedValues": ["Standard_A2_v2","Standard_B2s"],
+            "metadata": {
+                "description": "description"
+            }
+        },
+        "Usename": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 12,
+            "metadata": {
+                "description": "description"
+            }
+        },
+        "Password": {
+            "type": "securestring",
+            "minLength": 8,
+            "maxLength": 12,
+            "metadata": {
+                "description": "description"
+            }
+        }
+    },
+    "functions": [],
+    "variables": {
+        "VMName": "[concat(parameters('VMPrefix'),'-',parameters('ApplicationName'),'-',parameters('Environment'))]",
+        "StorageDisplayName": "[concat(variables('VMName'),'storage')]",
+        "PublicIP": "[concat(variables('VMName'),'PIP')]",
+        "NSG": "[concat(variables('VMName'),'nsg')]",
+        "VNet": "[concat(variables('VMName'),'vnet')]",
+        "Subnet": "[concat(variables('VMName'),'subnet')]",
+        "Interface": "[concat(variables('VMName'),'interface')]",
+        "OSDisk": "[concat(variables('VMName'),'OSDisk')]"
+    },
+    "resources": [
+        {
+            "name": "[toLower(variables('StorageDisplayName'))]",
+            "type": "Microsoft.Storage/storageAccounts",
+            "apiVersion": "2021-04-01",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "displayName": "[variables('StorageDisplayName')]"
+            },
+            "sku": {
+                "name": "Standard_LRS"
+            },
+            "kind": "Storage"
+        },
+        {
+            "name": "[variables('PublicIP')]",
+            "type": "Microsoft.Network/publicIPAddresses",
+            "apiVersion": "2020-11-01",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "displayName": "PublicIPAddress"
+            },
+            "properties": {
+                "publicIPAllocationMethod": "Dynamic",
+                "dnsSettings": {
+                    "domainNameLabel": "[toLower(variables('VMName'))]"
+                }
+            }
+        },
+        {
+            "name": "[variables('NSG')]",
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "apiVersion": "2020-11-01",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "securityRules": [
+                    {
+                        "name": "nsgRule1",
+                        "properties": {
+                            "description": "description",
+                            "protocol": "Tcp",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "3389",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "*",
+                            "access": "Allow",
+                            "priority": 100,
+                            "direction": "Inbound"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "name": "[variables('VNet')]",
+            "type": "Microsoft.Network/virtualNetworks",
+            "apiVersion": "2020-11-01",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityGroups', variables('NSG'))]"
+            ],
+            "tags": {
+                "Application": "[parameters('ApplicationName')]",
+                "Environment": "[parameters('Environment')]",
+                "Region": "[resourceGroup().location]"
+            },
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "10.0.0.0/16"
+                    ]
+                },
+                "subnets": [
+                    {
+                        "name": "[variables('Subnet')]",
+                        "properties": {
+                            "addressPrefix": "10.0.0.0/24",
+                            "networkSecurityGroup": {
+                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('NSG'))]"
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "name": "[variables('Interface')]",
+            "type": "Microsoft.Network/networkInterfaces",
+            "apiVersion": "2020-11-01",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/publicIPAddresses', variables('PublicIP'))]",
+                "[resourceId('Microsoft.Network/virtualNetworks', variables('VNet'))]"
+            ],
+            "tags": {
+                "displayName": "[variables('Interface')]"
+            },
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "ipConfig1",
+                        "properties": {
+                            "privateIPAllocationMethod": "Dynamic",
+                            "publicIPAddress": {
+                                "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('PublicIP'))]"
+                            },
+                            "subnet": {
+                                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('VNet'), variables('Subnet'))]"
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "name": "[variables('VMName')]",
+            "type": "Microsoft.Compute/virtualMachines",
+            "apiVersion": "2021-03-01",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', toLower(variables('StorageDisplayName')))]",
+                "[resourceId('Microsoft.Network/networkInterfaces', variables('Interface'))]"
+            ],
+            "tags": {
+                "displayName": "[variables('VMName')]"
+            },
+            "properties": {
+                "hardwareProfile": {
+                    "vmSize": "[parameters('Size')]"
+                },
+                "osProfile": {
+                    "computerName": "[variables('VMName')]",
+                    "adminUsername": "[parameters('Usename')]",
+                    "adminPassword": "[parameters('Password')]"
+                },
+                "storageProfile": {
+                    "imageReference": {
+                        "publisher": "MicrosoftWindowsServer",
+                        "offer": "WindowsServer",
+                        "sku": "2012-R2-Datacenter",
+                        "version": "latest"
+                    },
+                    "osDisk": {
+                        "name": "[variables('OSDisk')]",
+                        "caching": "ReadWrite",
+                        "createOption": "FromImage"
+                    }
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('Interface'))]"
+                        }
+                    ]
+                },
+                "diagnosticsProfile": {
+                    "bootDiagnostics": {
+                        "enabled": true,
+                        "storageUri": "[reference(resourceId('Microsoft.Storage/storageAccounts/', toLower(variables('StorageDisplayName')))).primaryEndpoints.blob]"
+                    }
+                }
+            }
+        }
+    ],
+    "outputs": {}
+}
