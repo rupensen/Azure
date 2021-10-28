@@ -1,0 +1,74 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "Environment": {
+            "type": "string",
+            "metadata": {
+                "description": "Environment (Dev/QA/Prod)"
+            }
+        },
+        "ProjectName": {
+            "type": "string",
+            "metadata": {
+                "description": "Project Name"
+            }
+        }
+    },
+    "functions": [],
+    "variables": {
+        "dnsZoneName": "[concat(parameters('ProjectName'),parameters('Environment'))]",
+        "linkedTemplateURI": "URI_Here"
+    },
+    "resources": [
+        {
+            "name": "linkedTemplate",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2021-04-01",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('linkedTemplateURI')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "Environment": {
+                        "value": "[parameters('ProjectName')]"
+                    },
+                    "ProjectName": {
+                        "value": "[parameters('ProjectName')]"
+                    }
+                }
+            }
+        },
+        {
+            "name": "nestedDeployment",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2021-04-01",
+            "properties": {
+                "expressionEvaluationOptions": {
+                    "scope": "inner"
+                },
+                "mode": "Incremental",
+                "parameters": {},
+                "template": {
+                    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+                    "contentVersion": "1.0.0.0",
+                    "parameters": {},
+                    "variables": {},
+                    "resources": [
+                        {
+                            "name": "[variables('dnsZoneName')]",
+                            "type": "Microsoft.Network/dnsZones",
+                            "apiVersion": "2018-05-01",
+                            "location": "global",
+                            "properties": {}
+                        }
+                    ],
+                    "outputs": {}
+                }
+            }
+        }
+    ],
+    "outputs": {}
+}
